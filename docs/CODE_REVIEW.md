@@ -8,12 +8,12 @@ Here are the Deliverables and Performance Standards for this project:
 
 | Deliverable | Performance Standard(s) | Acceptable Quality Level | Method of Assessment |
 | --- | --- | --- | --- |
-| Tested Code | Code delivered under the order must have substantial test code coverage<br><br>Version-controlled Joint Commissions GitHub repository of code that comprises product that will remain in the government domain | Minimum of 90% test coverage of all code. All areas of code are meaningfully  tested. | Combination of manual review and automated testing |
+| Tested Code | Code delivered under the order must have substantial test code coverage<br><br>Version-controlled PA Compact Commission GitHub repository of code that comprises product that will remain in the government domain | Minimum of 90% test coverage of all code. All areas of code are meaningfully  tested. | Combination of manual review and automated testing |
 | Properly Styled Code | [GSA 18F Front End Guide](https://frontend.18f.gov/#js-style) | 0 linting errors and 0 warnings | Combination of manual review and automated testing |
 | Accessible | Web Content Accessibility Guidelines 2.1 AA standards | 0 errors reported using an automated scanner and 0 errors reported in manual testing | [https://github.com/pa11y/pa11y](https://github.com/pa11y/pa11y) |
-| Deployed | Code must successfully build and deploy into staging environment. | Successful build with a single command | Combination of manual review and automated testing. |
+| Deployed | Code must successfully build and deploy into dev, test, and production environments. | Successful build with a single command | Combination of manual review and automated testing. |
 | Documentated | All dependencies are listed and the licenses are documented. Major functionality in the software/source code is documented. Individual methods are documented inline in a format that permits the use of tools such as JSDoc. System diagram is provided. | Combination of manual review and automated testing, if available | Manual review |
-| Secure | OWASP Application Security Verification Standard 3.0 | Code submitted must be free of medium- and high-level static and dynamic security vulnerabilities | Clean tests from a static testing SaaS (such as Snyk or npm audit) and from OWASP ZAP, along with documentation explaining any false positives |
+| Secure | OWASP Application Security Verification Standard 5.0 | Code submitted must be free of medium- and high-level static and dynamic security vulnerabilities | Clean tests from a static testing SaaS (such as Snyk or npm audit) and from OWASP ZAP, along with documentation explaining any false positives |
 
 ## Approach
 
@@ -85,7 +85,7 @@ We wouldn’t want anyone being mean to us because of an oversight, mistake, or 
 
 ## Checklist
 
-Per [HOW_WE_WORK.md](https://github.com/csg-org/CompactConnect/edit/main/docs/HOW_WE_WORK.md), CSG may not review some items until the end of each sprint. For simplicity sake, we split the checklist into two, one for PRs and one for sprints. Some items on the sprint checklist may appear in particular PRs where it feels most relevant. We use these lists as starting points when performing code reviews to ensure that all tasks have been completed.
+Per [HOW_WE_WORK.md](HOW_WE_WORK.md), CSG may not review some items until the end of each sprint. For simplicity sake, we split the checklist into two, one for PRs and one for sprints. Some items on the sprint checklist may appear in particular PRs where it feels most relevant. We use these lists as starting points when performing code reviews to ensure that all tasks have been completed.
 
 ### Per PR Checklist
 
