@@ -1,0 +1,136 @@
+variable "tf_state_bucket" {
+  description = "The state bucket this environment's components and its network bootstrap state live in"
+  type        = string
+}
+
+variable "network_state_key" {
+  description = "Key in tf_state_bucket of the bootstrap state that exports vpc_id and private_subnet_ids"
+  type        = string
+  default     = "bootstrap/network/default/terraform.tfstate"
+}
+
+variable "aws_region" {
+  description = "The region to deploy to"
+  type        = string
+}
+
+variable "environment_name" {
+  description = "The environment: staging or prod. Names resources and secrets, and is the ENVIRONMENT the containers run with."
+  type        = string
+  validation {
+    condition     = contains(["staging", "prod"], var.environment_name)
+    error_message = "environment_name must be staging or prod."
+  }
+}
+
+variable "db_instance_class" {
+  description = "Aurora RDS instance class (must be Aurora-compatible, e.g. db.t3.medium)"
+  type        = string
+  default     = "db.t4g.medium"
+}
+
+variable "instance_count" {
+  description = "Number of Aurora cluster instances to create"
+  type        = number
+  default     = 1
+}
+
+variable "backup_retention_period" {
+  description = "Days of automated database backups to keep"
+  type        = number
+
+  validation {
+    condition     = var.backup_retention_period >= 7 && var.backup_retention_period <= 35
+    error_message = "backup_retention_period must be between 7 and 35 days."
+  }
+}
+
+variable "db_username" {
+  type        = string
+  description = "Database master username"
+}
+
+variable "repo_name" {
+  type        = string
+  description = "ECR repository URL for the API image: the ecr component's repository_url output"
+}
+
+variable "image_tag" {
+  type        = string
+  description = "The API image tag to run from repo_name: the commit SHA that built it. Passed by `just deploy`, never set in tfvars."
+  validation {
+    condition     = can(regex("^[0-9a-f]{40}$", var.image_tag))
+    error_message = "image_tag is the 40-character commit SHA the image was built from."
+  }
+}
+
+variable "dns_name" {
+  type        = string
+  description = "Fully-qualified domain name for the site (e.g. site.dev-pacompact.aws.focusconsulting.io). This assumes there already exists a Route 53 hosted zone for the parent domain in this account and a wildcard certificate that will cover this dns name."
+}
+
+variable "acm_certificate_arn" {
+  type        = string
+  description = "ARN of the ACM certificate the load balancer's HTTPS listener presents. It must cover dns_name and be issued in aws_region; CloudFront's own certificate is looked up in us-east-1 (dns.tf)."
+
+  validation {
+    condition     = can(regex("^arn:aws[a-z-]*:acm:[a-z0-9-]+:[0-9]{12}:certificate/.+$", var.acm_certificate_arn))
+    error_message = "acm_certificate_arn must be an ACM certificate ARN."
+  }
+
+  validation {
+    condition     = try(split(":", var.acm_certificate_arn)[3], "") == var.aws_region
+    error_message = "acm_certificate_arn must be a certificate in aws_region: a load balancer can use only a certificate from its own region."
+  }
+}
+
+variable "cloudtrail_management_events" {
+  type        = bool
+  description = "Whether this environment's trail records management events. False where another trail in the account already does: a second copy is charged per event. Reads and writes of uploaded documents are recorded either way."
+}
+
+variable "site_password_protected" {
+  type        = bool
+  description = "Whether CloudFront asks for the site password before it serves a page or passes an API call. On for an environment the public should not reach; the password is in the <environment_name>-site-access secret."
+}
+
+variable "deletion_protection" {
+  type        = bool
+  description = "Guards everything that would block or lose data in a teardown. Leave on wherever data must survive; an environment that is spun up and torn down turns it off."
+  default     = true
+}
+
+variable "ecs_max_capacity" {
+  type        = number
+  description = "Maximum number of ECS Fargate tasks to scale to"
+  default     = 2
+}
+
+variable "cognito_callback_url" {
+  type        = string
+  description = "Cognito OAuth callback URL (frontend login redirect). Defaults to https://<dns_name> if not set."
+  default     = null
+}
+
+variable "cognito_logout_url" {
+  type        = string
+  description = "Cognito logout redirect URL. Defaults to https://<dns_name> if not set."
+  default     = null
+}
+
+variable "commission_ops_email" {
+  description = "The Commission mailbox for operational notifications (open question Q-14); empty sends none"
+  type        = string
+  default     = ""
+}
+
+variable "log_level" {
+  description = "Log level for the API, the Worker, and scheduled jobs"
+  type        = string
+  default     = "INFO"
+
+  validation {
+    condition     = contains(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"], var.log_level)
+    error_message = "log_level must be one of DEBUG, INFO, WARNING, ERROR, CRITICAL."
+  }
+}
