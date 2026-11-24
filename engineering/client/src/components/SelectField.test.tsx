@@ -1,0 +1,115 @@
+import { render, screen } from "@testing-library/react";
+import { createRef } from "react";
+import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi } from "vitest";
+
+import { SelectField } from "./SelectField";
+import { renderWithForm } from "../tests/util";
+import { expectNoAxeViolations } from "../tests/axe";
+
+describe("SelectField component", () => {
+  const options = [
+    ["foo", "Foo"],
+    ["bar", "Bar"],
+  ];
+
+  it("renders with label and id", () => {
+    renderWithForm(<SelectField id="some-id" label="some-name" />);
+    const field = screen.getByRole("combobox", { name: /some-name/ });
+    expect(field).toBeInstanceOf(HTMLSelectElement);
+    expect(field).toHaveAttribute("id", "some-id");
+  });
+
+  it("describes the select with its hint", () => {
+    renderWithForm(<SelectField id="state" label="State" hint="Choose one" />);
+
+    expect(
+      screen.getByRole("combobox", { name: "State" }),
+    ).toHaveAccessibleDescription("Choose one");
+  });
+
+  it("is optional by default with enabled placeholder", () => {
+    renderWithForm(<SelectField id="some-id" label="some-name" />);
+    expect(
+      screen.getByRole("combobox", { name: /some-name/ }),
+    ).not.toBeRequired();
+    const placeholder = screen.getByText("- Select -");
+    expect(placeholder).toBeEnabled();
+    expect(placeholder).toBeVisible();
+  });
+
+  it("renders required correctly with disabled placeholder", () => {
+    renderWithForm(<SelectField id="req" label="required" required />);
+    expect(screen.getByRole("combobox", { name: /required/ })).toBeRequired();
+    const placeholder = screen.getByText("- Select -");
+    expect(placeholder).toBeDisabled();
+  });
+
+  it("renders all options", () => {
+    renderWithForm(
+      <SelectField id="some-id" label="some-name" options={options} />,
+    );
+    options.forEach(([value, displayValue]) => {
+      const option = screen.getByRole("option", { name: displayValue });
+      expect(option).toHaveValue(value);
+    });
+  });
+
+  it("renders and submits form default value", async () => {
+    const user = userEvent.setup();
+    const handler = vi.fn();
+    renderWithForm(
+      <SelectField id="some-id" label="some-name" options={options} />,
+      { defaultValues: { "some-id": "bar" }, onSubmit: handler },
+    );
+    expect(screen.getByRole("combobox", { name: /some-name/ })).toHaveValue(
+      "bar",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({ "some-id": "bar" }),
+    );
+  });
+
+  it("submits user-selected value", async () => {
+    const user = userEvent.setup();
+    const handler = vi.fn();
+    renderWithForm(
+      <SelectField id="some-id" label="some-name" options={options} />,
+      { defaultValues: { "some-id": "bar" }, onSubmit: handler },
+    );
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: /some-name/ }),
+      "foo",
+    );
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({ "some-id": "foo" }),
+    );
+  });
+
+  it("renders without an id, a form, or options", () => {
+    render(<SelectField label="Unbound" />);
+
+    const field = screen.getByRole("combobox");
+    expect(field).toHaveAttribute("name", "");
+    expect(field.querySelectorAll("option")).toHaveLength(1);
+    expect(field).not.toHaveTextContent("0");
+  });
+
+  it("uses a caller's ref instead of registering with the form", () => {
+    const ref = createRef<HTMLSelectElement>();
+    renderWithForm(
+      <SelectField id="pick" label="Pick" options={options} inputRef={ref} />,
+    );
+
+    expect(ref.current).toBe(screen.getByRole("combobox", { name: "Pick" }));
+  });
+
+  it("has no axe violations", async () => {
+    const { container } = renderWithForm(
+      <SelectField id="pick" label="State" options={[["KS", "Kansas"]]} />,
+    );
+    await expectNoAxeViolations(container);
+  });
+});
