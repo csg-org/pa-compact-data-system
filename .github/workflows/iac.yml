@@ -1,0 +1,93 @@
+name: IaC CI
+
+# Formats and validates the OpenTofu code with no credentials, then plans each
+# component against staging on pull requests and posts the plan as a comment.
+# Deploys are .github/workflows/deploy.yml.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: [engineering/infrastructure/**, .github/workflows/iac.yml, .tool-versions]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # The same pins as .tool-versions (constitution Principle XII)
+      - name: Read tool versions
+        id: versions
+        run: |
+          echo "tofu=$(awk '$1 == "opentofu" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+          echo "just=$(awk '$1 == "just" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: ${{ steps.versions.outputs.tofu }}
+          tofu_wrapper: false
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ steps.versions.outputs.just }}
+
+      - name: Format and validate
+        working-directory: engineering/infrastructure
+        run: just check
+
+  plan:
+    if: github.event_name == 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [ecr, app]
+    env:
+      TF_IN_AUTOMATION: "true"
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read tool versions
+        id: versions
+        run: |
+          echo "tofu=$(awk '$1 == "opentofu" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+          echo "just=$(awk '$1 == "just" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: ${{ steps.versions.outputs.tofu }}
+          tofu_wrapper: false
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ steps.versions.outputs.just }}
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # The app component runs the image this commit would build, so its plan always
+      # shows the task definitions changing; merging deploys that commit.
+      - name: Plan
+        working-directory: engineering/infrastructure
+        run: |
+          set -o pipefail # otherwise tee's exit status hides a failed plan
+          extra=""
+          if [ "${{ matrix.component }}" = app ]; then extra="-var image_tag=${{ github.event.pull_request.head.sha }}"; fi
+          just plan ${{ matrix.component }} staging -no-color -lock=false $extra 2>&1 | tee plan.txt
+
+      - name: Comment the plan
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/comment-plan.sh ${{ github.event.pull_request.number }} ${{ matrix.component }} engineering/infrastructure/plan.txt

@@ -1,0 +1,107 @@
+name: Client CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # The client's types are generated from the API's document.
+    paths: [engineering/client/**, engineering/api/openapi.json]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: engineering/client
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: engineering/client/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: engineering/client/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Check generated API types
+        run: |
+          pnpm generate
+          git diff --exit-code src/api || (echo "Run \`just generate\` and commit the result." && exit 1)
+
+      - name: Build Storybook
+        run: pnpm build-storybook --quiet
+        env:
+          STORYBOOK_DISABLE_TELEMETRY: 1
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: engineering/client/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: engineering/client/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests with coverage
+        run: pnpm test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: client
+          files: engineering/client/coverage/lcov.info
+          fail_ci_if_error: true
+
+  a11y:
+    name: Accessibility (pa11y-ci, WCAG 2 AA)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: engineering/client/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: engineering/client/pnpm-lock.yaml
+
+      - name: Install dependencies
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: pnpm install --frozen-lockfile
+
+      # pnpm's side-effects cache can skip puppeteer's Chrome download, so pa11y
+      # uses the Chrome the runner already has.
+      - name: Build, serve, and scan
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: pnpm a11y

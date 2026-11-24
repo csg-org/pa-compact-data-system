@@ -1,0 +1,77 @@
+name: API CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: [engineering/api/**, engineering/mocks/**]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: engineering/api
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: engineering/api/uv.lock
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Ruff check
+        run: uv run ruff check licensing_api tests conftest.py
+
+      - name: Ruff format check
+        run: uv run ruff format --check licensing_api tests conftest.py
+
+      - name: Pyright
+        run: uv run pyright licensing_api seed
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: engineering/api/uv.lock
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Start services
+        run: |
+          docker compose up -d --wait --build
+          docker compose run --rm rustfs-init
+
+      - name: Run tests with coverage
+        run: |
+          uv run --env-file .env.example coverage run -m pytest
+          uv run coverage report
+          uv run coverage xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: api
+          files: engineering/api/coverage.xml
+          fail_ci_if_error: true
