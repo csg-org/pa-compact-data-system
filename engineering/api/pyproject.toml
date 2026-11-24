@@ -1,0 +1,77 @@
+[project]
+name = "pa-compact-api"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.162.2",
+    "uvicorn[standard]>=0.54.0",
+    "gunicorn>=26.2.0",
+    "asyncpg>=0.32.0",
+    "pydantic-settings>=2.16.2",
+    "yoyo-migrations>=9.0.0",
+    "psycopg2-binary>=2.9.13",
+    "opentelemetry-api>=1.45.2",
+    "opentelemetry-sdk>=1.45.2",
+    "opentelemetry-instrumentation-fastapi>=0.66b2",
+    "opentelemetry-instrumentation-asyncpg>=0.66b2",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.45.2",
+    "httpx>=0.28.1",
+    "sqlmodel>=0.0.48",
+    "greenlet>=3.5.6",
+    "jinja2>=3.1.6",
+    "pyjwt[crypto]>=2.15.1",
+    "boto3>=1.43.126",
+    "cryptography>=50.0.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+    "asgi-lifespan>=2.1.0",
+    "coverage>=7.17.2",
+    "ruff>=0.17.4",
+    "pyright>=1.1.414",
+    "boto3-stubs[s3]>=1.43.126",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+concurrency = ["greenlet", "thread"]
+branch = true
+source = ["licensing_api"]
+
+[tool.coverage.report]
+# Constitution Principle III: 100% line and branch coverage.
+fail_under = 100
+show_missing = true
+skip_covered = true
+exclude_also = ["if __name__ == .__main__.:"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.format]
+quote-style="single"
+
+[tool.ruff.lint]
+# D101-D103: every public class, method, and function has a docstring (2xz.4).
+select = ["E", "F", "W", "I", "B", "C4", "UP", "D101", "D102", "D103"]
+ignore = [
+  "E501",  # line length handled by formatter
+  "B904",  # raise-without-from in exception re-wrapping is intentional
+  "UP017", # datetime.UTC not recognized by pyright 1.1.x stubs; use timezone.utc
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]  # test names say what they check
+
+[tool.pyright]
+pythonVersion = "3.13"
+venvPath = "."
+venv = ".venv"
