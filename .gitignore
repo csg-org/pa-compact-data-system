@@ -1,0 +1,18 @@
+*.pyc
+
+.env*
+.idea/
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# OpenTofu files to ignore
+.terraform
+
+# Node dependencies
+node_modules/
+
+# Next.js build output
+.next/
+
+# Security scan output (`just sbom`)
+security-reports/
