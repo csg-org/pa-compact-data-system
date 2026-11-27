@@ -1,0 +1,6 @@
+.claude/
+thoughts/
+node_modules/
+**/node_modules/
+engineering/client/.next/
+engineering/client/out/
