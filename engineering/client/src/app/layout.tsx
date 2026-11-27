@@ -1,0 +1,40 @@
+import "src/styles/styles.scss";
+
+/**
+ * Root layout component, wraps all pages.
+ * @see https://nextjs.org/docs/app/api-reference/file-conventions/layout
+ */
+import { Metadata } from "next";
+import { AuthProvider } from "src/contexts/AuthContext";
+import I18nProvider from "src/components/I18nProvider";
+import AppShell from "src/components/AppShell";
+import { CurrentUserProvider } from "src/contexts/CurrentUserContext";
+
+export const metadata: Metadata = {
+  title: {
+    default: "PA Compact Data System",
+    template: "%s | PA Compact Data System",
+  },
+  icons: [`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/img/favicon.png`],
+};
+
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+/** Root layout for every page: sets the page title, provides i18n and the signed-in user, and wraps the page in the shell. */
+export default function RootLayout({ children }: LayoutProps) {
+  return (
+    <html lang="en">
+      <body>
+        <I18nProvider>
+          <AuthProvider>
+            <CurrentUserProvider>
+              <AppShell>{children}</AppShell>
+            </CurrentUserProvider>
+          </AuthProvider>
+        </I18nProvider>
+      </body>
+    </html>
+  );
+}
