@@ -1,0 +1,52 @@
+/*
+----------------------------------------
+USWDS settings overrides
+----------------------------------------
+See https://designsystem.digital.gov/documentation/settings/
+for a full list of available settings.
+----------------------------------------
+*/
+
+$base-path: "" !default;
+
+@use "uswds-core" with (
+  // Disable scary but mostly irrelevant warnings:
+  $theme-show-notifications: false,
+
+  // Specify USWDS font and image paths.
+  // Same paths are successfully used for both Next.js and Storybook.
+  $theme-font-path: "#{$base-path}/uswds/fonts",
+  $theme-image-path: "#{$base-path}/uswds/img",
+  // Ensure utility classes always override other styles
+  $utilities-use-important: true,
+
+  // Use USWDS defaults for typography
+  $theme-style-body-element: true,
+  $theme-font-type-sans: "public-sans",
+  $theme-font-role-heading: "sans",
+  $theme-font-role-alt: "sans",
+  $theme-font-weight-semibold: 600,
+  $theme-global-content-styles: true,
+  $theme-global-link-styles: true,
+  $theme-global-paragraph-styles: true,
+
+  // PA Compact palette (deep civic navy + healthcare teal) mapped to USWDS tokens
+  $theme-color-primary-family: "blue-warm",
+  $theme-color-primary-lighter: "blue-warm-10",
+  $theme-color-primary-light: "blue-warm-30",
+  $theme-color-primary: "blue-warm-70v",
+  $theme-color-primary-vivid: "blue-warm-60v",
+  $theme-color-primary-dark: "blue-warm-80v",
+  $theme-color-primary-darker: "blue-warm-90",
+  $theme-color-accent-cool-family: "cyan",
+  $theme-color-accent-cool-lighter: "cyan-5v",
+  $theme-color-accent-cool-light: "cyan-20v",
+  $theme-color-accent-cool: "cyan-40v",
+  $theme-color-accent-cool-dark: "cyan-60v",
+  $theme-color-accent-cool-darker: "cyan-70v",
+
+  // Refined component tokens within USWDS defaults
+  $theme-card-border-color: "base-light",
+  $theme-card-border-width: 1px,
+  $theme-table-header-background-color: "base-lightest"
+);
