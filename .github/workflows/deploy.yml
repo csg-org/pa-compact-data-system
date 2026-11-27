@@ -1,0 +1,73 @@
+name: Deploy
+
+# `just deploy <env>` (engineering/infrastructure/justfile) through the environment's
+# GitHub Environment, whose variables name the AWS role to assume. staging deploys when
+# someone runs this workflow (decided 2026-10-28: not yet on every merge to main);
+# release.yml calls it for staging and prod from tags.
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: The environment to deploy
+        required: true
+        type: choice
+        options: [staging]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'staging' }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read tool versions
+        id: versions
+        run: |
+          echo "tofu=$(awk '$1 == "opentofu" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+          echo "just=$(awk '$1 == "just" {print $2}' .tool-versions)" >> "$GITHUB_OUTPUT"
+
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: ${{ steps.versions.outputs.tofu }}
+          tofu_wrapper: false
+
+      - uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
+        with:
+          just-version: ${{ steps.versions.outputs.just }}
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          package_json_file: engineering/client/package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: pnpm
+          cache-dependency-path: engineering/client/pnpm-lock.yaml
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Deploy
+        working-directory: engineering/infrastructure
+        env:
+          AWS_REGION: ${{ vars.AWS_REGION }}
+          PUPPETEER_SKIP_DOWNLOAD: "true" # only the client's a11y job needs pa11y's Chrome
+        run: just deploy ${{ inputs.environment || 'staging' }}
